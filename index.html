@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <style>
+    :root{
+      --bg:#f2ede0; --panel:#ffffff; --panel-soft:#f7f2e6; --border:#e2d9c3;
+      --text:#2c2620; --muted:#8a8171;
+      --accent:#7a2f22; --accent-soft:rgba(122,47,34,0.09); --accent-dark:#5e2318;
+      --secondary:#a9762e; --secondary-soft:rgba(169,118,46,0.10);
+      --danger:#b23b3b; --danger-soft:rgba(178,59,59,0.10);
+      --input-bg:#fbf8f0;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+      min-height:100vh; padding:24px 16px 60px;
+    }
+    .wrap{max-width:640px;margin:0 auto;}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:12px;}
+    .brand-mark{
+      width:40px;height:40px;border-radius:10px;background:var(--accent);
+      display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;flex-shrink:0;
+    }
+    header h1{margin:0;font-size:18px;color:var(--text);}
+    header p{margin:2px 0 0;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;}
+
+    nav.tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:4px;}
+    nav.tabs button{
+      border:none;background:transparent;padding:8px 14px;border-radius:7px;font-size:13px;font-weight:600;
+      color:var(--muted);cursor:pointer;font-family:inherit;
+    }
+    nav.tabs button.active{background:var(--accent);color:#fff;}
+
+    .card{
+      background:var(--panel);border:1px solid var(--border);border-radius:12px;
+      padding:20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(44,38,32,0.04);
+    }
+    .card h2{
+      margin:0 0 14px;font-size:12.5px;font-weight:700;color:var(--accent);
+      text-transform:uppercase;letter-spacing:0.6px;display:flex;align-items:center;gap:8px;
+    }
+    .step-badge{
+      width:20px;height:20px;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+      font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+
+    label{display:block;font-size:12.5px;color:var(--muted);margin:12px 0 5px;text-transform:uppercase;letter-spacing:0.3px;}
+    input[type=text], input[type=number], input[type=password], select, textarea{
+      width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);
+      background:var(--input-bg);color:var(--text);font-size:14px;font-family:inherit;
+    }
+    input:focus, select:focus{outline:none;border-color:var(--accent);}
+
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:6px;
+      padding:11px 18px;border-radius:8px;border:none;cursor:pointer;
+      font-size:14px;font-weight:600;color:#fff;background:var(--accent);
+      margin-top:14px;font-family:inherit;
+    }
+    .btn:hover{background:var(--accent-dark);}
+    .btn.secondary{background:var(--secondary);color:#fff;}
+    .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+    .btn.danger{background:var(--danger);color:#fff;}
+    .btn:disabled{opacity:0.45;cursor:not-allowed;}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+    .btn-full{width:100%;}
+
+    .summary-bar{
+      display:flex;justify-content:space-between;align-items:center;
+      background:var(--panel);border:1px solid var(--border);border-radius:10px;
+      padding:12px 16px;margin-bottom:16px;font-size:13px;
+    }
+    .summary-bar .info b{color:var(--text);}
+    .summary-bar .info span{color:var(--muted);}
+    .summary-bar .edit-link{color:var(--secondary);cursor:pointer;font-size:12.5px;font-weight:600;}
+
+    .lookup-preview{
+      background:var(--panel-soft);border:1px solid var(--border);border-radius:8px;
+      padding:12px 14px;margin-top:10px;font-size:13px;
+    }
+    .lookup-preview .row{display:flex;justify-content:space-between;padding:3px 0;}
+    .lookup-preview .row span:first-child{color:var(--muted);}
+    .lookup-preview.notfound{color:var(--danger);background:var(--danger-soft);border-color:rgba(178,59,59,0.25);}
+
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;}
+    th,td{border:1px solid var(--border);padding:8px;text-align:left;vertical-align:middle;}
+    th{color:var(--muted);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.3px;background:var(--panel-soft);}
+    td input[type=number]{width:70px;padding:6px 8px;}
+    .qty-cell{display:flex;align-items:center;gap:6px;}
+    .remove-btn{color:var(--danger);cursor:pointer;font-size:16px;font-weight:700;}
+
+    .status{font-size:13px;margin-top:10px;padding:9px 12px;border-radius:8px;}
+    .status.ok{background:var(--accent-soft);color:var(--accent);}
+    .status.err{background:var(--danger-soft);color:var(--danger);}
+
+    .empty{color:var(--muted);font-size:13px;text-align:center;padding:16px 0;}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-screen{text-align:center;padding:60px 0;color:var(--muted);font-size:13px;}
+
+    .pending-badge{
+      display:inline-block;background:var(--accent-soft);color:var(--accent);
+      font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px;
+    }
+    .pending-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+    .pending-meta{font-size:12.5px;color:var(--muted);}
+    .pending-meta b{color:var(--text);}
+    .cat-tag{
+      display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);
+      padding:2px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:0.3px;
+    }
+    .add-item-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:flex-end;}
+    .add-item-row > div{flex:1;min-width:120px;}
+    .add-item-row label{margin:0 0 5px;}
+    .divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+    .category-picker{display:flex;flex-wrap:wrap;gap:8px;}
+    .category-chip{
+      padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel-soft);
+      cursor:pointer;font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;
+    }
+    .category-chip:hover{border-color:var(--accent);}
+    .category-chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .category-chip .count{background:rgba(44,38,32,0.08);padding:1px 7px;border-radius:999px;font-size:11px;}
+    .category-chip.active .count{background:rgba(255,255,255,0.25);}
+
+    .pending-cat-card{cursor:pointer;transition:border-color .15s;}
+    .pending-cat-card:hover{border-color:var(--accent);}
+    .pending-cat-card .pending-card-header{align-items:center;margin-bottom:0;}
+    .pending-cat-count{
+      display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;
+      background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13px;border-radius:999px;padding:0 8px;
+    }
+    .pending-cat-empty{color:var(--muted);font-size:12.5px;margin-top:4px;}
+    .back-link{color:var(--secondary);cursor:pointer;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-bottom:14px;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">BS</div>
+      <div>
+        <h1>SHBN - Bad Stock Log</h1>
+        <p>Meat &amp; Seafood &middot; Local Vege &middot; Import Vege &middot; Fruit</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button id="tabBtnNew" class="active" onclick="showTab('new')">New Entry</button>
+      <button id="tabBtnIt" onclick="showTab('it')">IT Entry</button>
+      <button id="tabBtnAdmin" onclick="showTab('admin')">Admin</button>
+    </nav>
+  </header>
+
+  <!-- Loading state while masterlist loads -->
+  <div id="loadingView" class="card">
+    <div class="loading-screen"><span class="spinner"></span> Loading product list...</div>
+  </div>
+
+  <!-- ============ NEW ENTRY TAB ============ -->
+  <div id="newTabView" style="display:none;">
+
+    <!-- STEP 1: Staff / Supervisor / Category -->
+    <div class="card" id="step1View" style="display:none;">
+      <h2><span class="step-badge">1</span> Start New Entry</h2>
+      <label>Staff Name</label>
+      <input type="text" id="staffInput" placeholder="Enter staff name">
+
+      <label>Supervisor Name</label>
+      <input type="text" id="supervisorInput" placeholder="Enter supervisor name">
+
+      <label>Bad Stock Category</label>
+      <select id="categoryInput">
+        <option value="">Select category...</option>
+      </select>
+
+      <button class="btn btn-full" onclick="goToStep2()">Continue</button>
+      <div id="step1Status"></div>
+    </div>
+
+    <!-- STEP 2: PLU lookup + cart -->
+    <div id="step2View" style="display:none;">
+      <div class="summary-bar">
+        <div class="info">
+          <b id="summaryStaff"></b> &middot; <span id="summarySupervisor"></span><br>
+          <span id="summaryCategory"></span>
+        </div>
+        <div class="btn-row" style="margin-top:0;">
+          <span class="edit-link" onclick="backToStep1()">Edit</span>
+          <span class="edit-link" style="color:var(--danger);" onclick="cancelEntry()">Cancel</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step-badge">2</span> Add Item</h2>
+        <label>PLU Code / Product Code</label>
+        <input type="text" id="pluInput" placeholder="Enter PLU code and press Enter">
+        <div id="lookupPreview"></div>
+
+        <div id="qtySection" style="display:none;">
+          <label>Quantity</label>
+          <input type="number" id="qtyInput" min="0" step="any" placeholder="Enter quantity">
+          <button class="btn btn-full" onclick="addToCart()">Add to List</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step-badge">3</span> Preview (<span id="cartCount">0</span> item<span id="cartCountPlural">s</span>)</h2>
+        <div id="cartEmpty" class="empty">No items added yet.</div>
+        <table id="cartTable" style="display:none;">
+          <thead>
+            <tr><th>Description</th><th>PLU</th><th>UOM</th><th>Qty</th><th></th></tr>
+          </thead>
+          <tbody id="cartBody"></tbody>
+        </table>
+
+        <button class="btn btn-full" id="submitBtn" onclick="submitCart()" disabled>Submit All</button>
+        <div id="submitStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ IT ENTRY TAB ============ -->
+  <div id="itTabView" style="display:none;">
+    <div class="card">
+      <h2><span class="step-badge">&#9679;</span> Pending Entries<span class="pending-badge" id="pendingCount">0</span></h2>
+      <button class="btn ghost" style="margin-top:0;" onclick="loadPendingEntries()">Refresh</button>
+    </div>
+
+    <div class="card">
+      <h2>Select Category</h2>
+      <div class="category-picker" id="categoryPicker"></div>
+    </div>
+
+    <div id="pendingCategoryEmpty" class="empty" style="display:none;">Select a category above to view its pending entries.</div>
+    <div id="pendingEmpty" class="empty" style="display:none;">No pending entries in this category.</div>
+    <div id="pendingList"></div>
+  </div>
+
+  <!-- ============ ADMIN TAB ============ -->
+  <div id="adminTabView" style="display:none;">
+    <div class="card" id="adminLockView">
+      <h2><span class="step-badge">&#128274;</span> Admin Access</h2>
+      <label>Password</label>
+      <input type="password" id="adminPasswordInput" placeholder="Enter admin password">
+      <button class="btn btn-full" onclick="unlockAdmin()">Unlock</button>
+      <div id="adminLockStatus"></div>
+    </div>
+
+    <div id="adminUnlockedView" style="display:none;">
+      <div class="card">
+        <h2><span class="step-badge">+</span> Add / Update Masterlist Item</h2>
+        <label>PLU Code</label>
+        <input type="text" id="adminPlu" placeholder="e.g. 50046">
+        <label>Description</label>
+        <input type="text" id="adminDescription" placeholder="e.g. FRESH WHOLE CHICKEN">
+        <label>Material Code</label>
+        <input type="text" id="adminMaterial" placeholder="e.g. 10089824">
+        <label>UOM</label>
+        <input type="text" id="adminUom" placeholder="e.g. KG">
+        <button class="btn btn-full" onclick="submitMasterlistItem()">Save to Masterlist</button>
+        <div id="adminSaveStatus"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="step-badge">&#128465;</span> Delete Pending Transaction</h2>
+        <button class="btn ghost" style="margin-top:0;" onclick="loadAdminPendingList()">Refresh List</button>
+      </div>
+      <div id="adminPendingEmpty" class="empty" style="display:none;">No pending transactions.</div>
+      <div id="adminPendingList"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var masterlist = [];         // full masterlist loaded once at startup
+  var masterlistByPlu = {};    // fast lookup map: plu -> {description, material, uom}
+  var currentLookup = null;    // currently matched PLU item awaiting quantity (New Entry)
+  var cart = [];               // { plu, description, material, uom, qty }
+  var pendingEntries = [];     // raw data from getPendingEntries()
+  var pendingDraft = {};       // keyed by batchTimestampMs -> { items, materialDocument, keyInBy }
+  var adminUnlocked = false;
+  var appCategories = [];      // loaded once from getCategories()
+  var selectedPendingCategory = null; // which category is currently shown in IT Entry
+
+  // ---------- Startup: load masterlist once, cache client-side ----------
+  window.addEventListener('DOMContentLoaded', function(){
+    google.script.run
+      .withSuccessHandler(function(list){
+        masterlist = list;
+        masterlistByPlu = {};
+        list.forEach(function(item){ masterlistByPlu[String(item.plu).trim()] = item; });
+        loadCategories();
+      })
+      .withFailureHandler(function(err){
+        document.getElementById('loadingView').innerHTML =
+          '<div class="status err">Failed to load product list: ' + err.message + '</div>';
+      })
+      .getMasterlist();
+  });
+
+  function loadCategories(){
+    google.script.run
+      .withSuccessHandler(function(categories){
+        appCategories = categories;
+        var select = document.getElementById('categoryInput');
+        categories.forEach(function(cat){
+          var opt = document.createElement('option');
+          opt.value = cat; opt.textContent = cat;
+          select.appendChild(opt);
+        });
+        document.getElementById('loadingView').style.display = 'none';
+        showTab('new');
+
+        var draft = loadDraft();
+        if(draft && draft.staff && draft.supervisor && draft.category){
+          sessionStaff = draft.staff;
+          sessionSupervisor = draft.supervisor;
+          sessionCategory = draft.category;
+          cart = draft.cart || [];
+
+          document.getElementById('staffInput').value = sessionStaff;
+          document.getElementById('supervisorInput').value = sessionSupervisor;
+          document.getElementById('categoryInput').value = sessionCategory;
+
+          enterStep2();
+          renderCart();
+        } else {
+          document.getElementById('step1View').style.display = 'block';
+        }
+      })
+      .withFailureHandler(function(err){
+        document.getElementById('loadingView').innerHTML =
+          '<div class="status err">Failed to load categories: ' + err.message + '</div>';
+      })
+      .getCategories();
+  }
+
+  // ---------- Tab switching ----------
+  function showTab(tab){
+    document.getElementById('newTabView').style.display = tab === 'new' ? 'block' : 'none';
+    document.getElementById('itTabView').style.display = tab === 'it' ? 'block' : 'none';
+    document.getElementById('adminTabView').style.display = tab === 'admin' ? 'block' : 'none';
+
+    document.getElementById('tabBtnNew').classList.toggle('active', tab === 'new');
+    document.getElementById('tabBtnIt').classList.toggle('active', tab === 'it');
+    document.getElementById('tabBtnAdmin').classList.toggle('active', tab === 'admin');
+
+    if(tab === 'it') loadPendingEntries();
+  }
+
+  // ================= NEW ENTRY =================
+
+  // ---------- Draft persistence (survives refresh / connection drops) ----------
+  var DRAFT_KEY = 'shbn_bad_stock_draft_v1';
+
+  function saveDraft(){
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        staff: sessionStaff,
+        supervisor: sessionSupervisor,
+        category: sessionCategory,
+        cart: cart
+      }));
+    } catch (e) { /* storage unavailable — fail silently, not critical */ }
+  }
+
+  function loadDraft(){
+    try {
+      var raw = localStorage.getItem(DRAFT_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function clearDraft(){
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+  }
+
+  var sessionStaff = '', sessionSupervisor = '', sessionCategory = '';
+
+  function goToStep2(){
+    var staff = document.getElementById('staffInput').value.trim();
+    var supervisor = document.getElementById('supervisorInput').value.trim();
+    var category = document.getElementById('categoryInput').value;
+    var statusEl = document.getElementById('step1Status');
+
+    if(!staff || !supervisor || !category){
+      statusEl.innerHTML = '<div class="status err">Please fill in staff, supervisor, and category.</div>';
+      return;
+    }
+    statusEl.innerHTML = '';
+    sessionStaff = staff; sessionSupervisor = supervisor; sessionCategory = category;
+    enterStep2();
+    saveDraft();
+  }
+
+  function enterStep2(){
+    document.getElementById('summaryStaff').textContent = sessionStaff;
+    document.getElementById('summarySupervisor').textContent = sessionSupervisor;
+    document.getElementById('summaryCategory').textContent = sessionCategory;
+
+    document.getElementById('step1View').style.display = 'none';
+    document.getElementById('step2View').style.display = 'block';
+  }
+
+  function backToStep1(){
+    document.getElementById('step2View').style.display = 'none';
+    document.getElementById('step1View').style.display = 'block';
+  }
+
+  function cancelEntry(){
+    if(cart.length && !confirm('Discard this entry? Any items you\'ve added but not submitted will be lost.')) {
+      return;
+    }
+    sessionStaff = ''; sessionSupervisor = ''; sessionCategory = '';
+    cart = [];
+    currentLookup = null;
+    unmatchedConfirmed = false;
+    lastLookedUpPlu = '';
+    clearDraft();
+
+    document.getElementById('staffInput').value = '';
+    document.getElementById('supervisorInput').value = '';
+    document.getElementById('categoryInput').value = '';
+    document.getElementById('pluInput').value = '';
+    document.getElementById('qtyInput').value = '';
+    document.getElementById('lookupPreview').innerHTML = '';
+    document.getElementById('qtySection').style.display = 'none';
+    document.getElementById('submitStatus').innerHTML = '';
+    renderCart();
+    backToStep1();
+  }
+
+  var unmatchedConfirmed = false;
+  var lastLookedUpPlu = '';
+
+  document.getElementById('pluInput').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); lookupPlu(); }
+  });
+
+  function lookupPlu(){
+    var plu = document.getElementById('pluInput').value.trim();
+    var previewEl = document.getElementById('lookupPreview');
+    var qtySection = document.getElementById('qtySection');
+
+    if(plu !== lastLookedUpPlu) unmatchedConfirmed = false;
+    lastLookedUpPlu = plu;
+
+    if(!plu){
+      previewEl.innerHTML = '';
+      qtySection.style.display = 'none';
+      currentLookup = null;
+      return;
+    }
+
+    var match = masterlistByPlu[plu];
+
+    if(match){
+      currentLookup = { plu: plu, description: match.description, material: match.material, uom: match.uom, unmatched: false };
+      previewEl.innerHTML =
+        '<div class="lookup-preview">' +
+        '<div class="row"><span>Description</span><b>' + escapeHtml(match.description) + '</b></div>' +
+        '<div class="row"><span>Material</span><b>' + escapeHtml(match.material) + '</b></div>' +
+        '<div class="row"><span>UOM</span><b>' + escapeHtml(match.uom) + '</b></div>' +
+        '</div>';
+      qtySection.style.display = 'block';
+      document.getElementById('qtyInput').focus();
+      return;
+    }
+
+    currentLookup = null;
+    qtySection.style.display = 'none';
+
+    if(!unmatchedConfirmed){
+      previewEl.innerHTML =
+        '<div class="lookup-preview notfound">' +
+        '⚠ PLU "' + escapeHtml(plu) + '" was not found in the Masterlist. Please double-check the code before proceeding.' +
+        '<div class="btn-row" style="margin-top:10px;">' +
+        '<button type="button" class="btn ghost" onclick="confirmUnmatchedPlu()">Proceed anyway</button>' +
+        '</div></div>';
+    } else {
+      currentLookup = { plu: plu, description: '', material: '', uom: '', unmatched: true };
+      previewEl.innerHTML =
+        '<div class="lookup-preview notfound">' +
+        'This PLU isn\'t in the Masterlist yet. It will still be submitted, but flagged red for admin review until it\'s added.' +
+        '</div>';
+      qtySection.style.display = 'block';
+      document.getElementById('qtyInput').focus();
+    }
+  }
+
+  function confirmUnmatchedPlu(){
+    unmatchedConfirmed = true;
+    lookupPlu();
+  }
+
+  document.getElementById('pluInput').addEventListener('input', function(){
+    lookupPlu();
+  });
+
+  function addToCart(){
+    if(!currentLookup) return;
+    var qty = parseFloat(document.getElementById('qtyInput').value);
+    if(!qty || qty <= 0){
+      alert('Please enter a valid quantity.');
+      return;
+    }
+
+    var existing = cart.find(function(c){ return c.plu === currentLookup.plu; });
+    if(existing){
+      existing.qty += qty;
+    } else {
+      cart.push({
+        plu: currentLookup.plu,
+        description: currentLookup.description,
+        material: currentLookup.material,
+        uom: currentLookup.uom,
+        qty: qty,
+        unmatched: !!currentLookup.unmatched
+      });
+    }
+
+    document.getElementById('pluInput').value = '';
+    document.getElementById('qtyInput').value = '';
+    document.getElementById('lookupPreview').innerHTML = '';
+    document.getElementById('qtySection').style.display = 'none';
+    currentLookup = null;
+    unmatchedConfirmed = false;
+    lastLookedUpPlu = '';
+    document.getElementById('pluInput').focus();
+
+    renderCart();
+    saveDraft();
+  }
+
+  function renderCart(){
+    var tbody = document.getElementById('cartBody');
+    var table = document.getElementById('cartTable');
+    var emptyEl = document.getElementById('cartEmpty');
+    var submitBtn = document.getElementById('submitBtn');
+
+    document.getElementById('cartCount').textContent = cart.length;
+    document.getElementById('cartCountPlural').textContent = cart.length === 1 ? '' : 's';
+
+    if(!cart.length){
+      table.style.display = 'none';
+      emptyEl.style.display = 'block';
+      submitBtn.disabled = true;
+      return;
+    }
+
+    emptyEl.style.display = 'none';
+    table.style.display = 'table';
+    submitBtn.disabled = false;
+
+    tbody.innerHTML = '';
+    cart.forEach(function(item, idx){
+      var tr = document.createElement('tr');
+      if(item.unmatched) tr.style.background = 'var(--danger-soft)';
+      var descDisplay = item.description ? escapeHtml(item.description) : '<span style="color:var(--danger);">(Not in Masterlist)</span>';
+      var uomDisplay = item.uom ? escapeHtml(item.uom) : '—';
+      tr.innerHTML =
+        '<td>' + descDisplay + '</td>' +
+        '<td>' + escapeHtml(item.plu) + '</td>' +
+        '<td>' + uomDisplay + '</td>' +
+        '<td><div class="qty-cell"><input type="number" min="0" step="any" value="' + item.qty + '" data-idx="' + idx + '" class="qty-edit"></div></td>' +
+        '<td><span class="remove-btn" data-idx="' + idx + '">&times;</span></td>';
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('.qty-edit').forEach(function(input){
+      input.addEventListener('change', function(){
+        var idx = parseInt(input.dataset.idx, 10);
+        var val = parseFloat(input.value);
+        if(!val || val <= 0){
+          input.value = cart[idx].qty;
+          return;
+        }
+        cart[idx].qty = val;
+        saveDraft();
+      });
+    });
+
+    tbody.querySelectorAll('.remove-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var idx = parseInt(btn.dataset.idx, 10);
+        cart.splice(idx, 1);
+        renderCart();
+        saveDraft();
+      });
+    });
+  }
+
+  function submitCart(){
+    var statusEl = document.getElementById('submitStatus');
+    if(!cart.length) return;
+
+    statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Submitting...</div>';
+    document.getElementById('submitBtn').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(res){
+        statusEl.innerHTML = '<div class="status ok">' + res.count + ' item(s) submitted successfully.</div>';
+        cart = [];
+        clearDraft();
+        renderCart();
+        setTimeout(function(){
+          document.getElementById('staffInput').value = '';
+          document.getElementById('supervisorInput').value = '';
+          document.getElementById('categoryInput').value = '';
+          statusEl.innerHTML = '';
+          backToStep1();
+        }, 1200);
+      })
+      .withFailureHandler(function(err){
+        statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+        document.getElementById('submitBtn').disabled = false;
+      })
+      .submitBadStock(sessionStaff, sessionSupervisor, sessionCategory, cart);
+  }
+
+  // ================= IT ENTRY =================
+
+  function loadPendingEntries(){
+    document.getElementById('categoryPicker').innerHTML = '<div class="empty"><span class="spinner"></span> Loading...</div>';
+    document.getElementById('pendingList').innerHTML = '';
+    document.getElementById('pendingEmpty').style.display = 'none';
+    document.getElementById('pendingCategoryEmpty').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(entries){
+        pendingEntries = entries;
+        document.getElementById('pendingCount').textContent = entries.length;
+
+        entries.forEach(function(batch){
+          var key = pendingKey(batch);
+          if(!pendingDraft[key]){
+            pendingDraft[key] = {
+              items: batch.items.map(function(it){ return Object.assign({}, it, {isNew:false}); }),
+              materialDocument: '',
+              keyInBy: '',
+              pluInput: '',
+              qtyInput: '',
+              submitted: null // holds printData once submitted
+            };
+          }
+        });
+
+        // if the previously selected category no longer has any entries, clear the selection
+        if(selectedPendingCategory && !entries.some(function(b){ return b.category === selectedPendingCategory; })){
+          selectedPendingCategory = null;
+        }
+
+        renderCategoryPicker();
+        renderPendingListFiltered();
+      })
+      .withFailureHandler(function(err){
+        document.getElementById('categoryPicker').innerHTML = '';
+        document.getElementById('pendingList').innerHTML =
+          '<div class="status err">Failed to load pending entries: ' + err.message + '</div>';
+      })
+      .getPendingEntries();
+  }
+
+  function pendingKey(batch){ return batch.sheetName + '::' + batch.batchTimestampMs; }
+
+  function renderCategoryPicker(){
+    var picker = document.getElementById('categoryPicker');
+    picker.innerHTML = '';
+
+    appCategories.forEach(function(cat){
+      var count = pendingEntries.filter(function(b){ return b.category === cat; }).length;
+      var chip = document.createElement('div');
+      chip.className = 'category-chip' + (selectedPendingCategory === cat ? ' active' : '');
+      chip.innerHTML = escapeHtml(cat) + ' <span class="count">' + count + '</span>';
+      chip.onclick = function(){
+        selectedPendingCategory = cat;
+        renderCategoryPicker();
+        renderPendingListFiltered();
+      };
+      picker.appendChild(chip);
+    });
+  }
+
+  function renderPendingListFiltered(){
+    var container = document.getElementById('pendingList');
+    var emptyEl = document.getElementById('pendingEmpty');
+    var categoryEmptyEl = document.getElementById('pendingCategoryEmpty');
+
+    if(!selectedPendingCategory){
+      container.innerHTML = '';
+      emptyEl.style.display = 'none';
+      categoryEmptyEl.style.display = 'block';
+      return;
+    }
+    categoryEmptyEl.style.display = 'none';
+
+    var filtered = pendingEntries.filter(function(b){ return b.category === selectedPendingCategory; });
+
+    if(!filtered.length){
+      container.innerHTML = '';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    emptyEl.style.display = 'none';
+
+    renderPendingList(filtered);
+  }
+
+  function renderPendingList(batchesToRender){
+    var container = document.getElementById('pendingList');
+    container.innerHTML = '';
+
+    batchesToRender.forEach(function(batch){
+      var key = pendingKey(batch);
+      var draft = pendingDraft[key];
+      var card = document.createElement('div');
+      card.className = 'card';
+
+      if(draft.submitted){
+        card.innerHTML =
+          '<div class="pending-card-header">' +
+            '<div><span class="cat-tag">' + escapeHtml(batch.category) + '</span></div>' +
+            '<div class="pending-meta">' + escapeHtml(batch.dateDisplay) + '</div>' +
+          '</div>' +
+          '<div class="pending-meta" style="margin-top:6px;"><b>' + escapeHtml(batch.staff) + '</b> &middot; ' + escapeHtml(batch.supervisor) + '</div>' +
+          '<div class="status ok" style="margin-top:12px;">Completed &middot; Material Document ' + escapeHtml(draft.materialDocument) + '</div>' +
+          '<button class="btn secondary btn-full" onclick="printBatch(\'' + key + '\')">Print</button>';
+        container.appendChild(card);
+        return;
+      }
+
+      var itemsHtml = draft.items.map(function(item, idx){
+        var descDisplay = item.description ? escapeHtml(item.description) : '<span style="color:var(--danger);">(Not in Masterlist)</span>';
+        return '<tr>' +
+          '<td>' + descDisplay + '</td>' +
+          '<td>' + escapeHtml(item.plu) + '</td>' +
+          '<td>' + escapeHtml(item.uom || '\u2014') + '</td>' +
+          '<td><input type="number" min="0" step="any" value="' + item.qty + '" data-key="' + key + '" data-idx="' + idx + '" class="pending-qty-edit"></td>' +
+          '<td><span class="remove-btn" data-key="' + key + '" data-idx="' + idx + '" onclick="removePendingItem(this)">&times;</span></td>' +
+        '</tr>';
+      }).join('');
+
+      card.innerHTML =
+        '<div class="pending-card-header">' +
+          '<div><span class="cat-tag">' + escapeHtml(batch.category) + '</span></div>' +
+          '<div class="pending-meta">' + escapeHtml(batch.dateDisplay) + '</div>' +
+        '</div>' +
+        '<div class="pending-meta" style="margin-top:6px;"><b>' + escapeHtml(batch.staff) + '</b> &middot; ' + escapeHtml(batch.supervisor) + '</div>' +
+        '<table>' +
+          '<thead><tr><th>Description</th><th>PLU</th><th>UOM</th><th>Qty</th><th></th></tr></thead>' +
+          '<tbody>' + itemsHtml + '</tbody>' +
+        '</table>' +
+        '<div class="add-item-row">' +
+          '<div><label>Add PLU</label><input type="text" class="pending-plu-input" data-key="' + key + '" placeholder="PLU code"></div>' +
+          '<div style="flex:0 0 90px;"><label>Qty</label><input type="number" min="0" step="any" class="pending-qty-input" data-key="' + key + '" placeholder="0"></div>' +
+          '<button class="btn ghost" style="margin-top:0;" onclick="addPendingItem(\'' + key + '\')">Add</button>' +
+        '</div>' +
+        '<div id="pendingAddStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_') + '"></div>' +
+        '<hr class="divider">' +
+        '<label>Material Document</label>' +
+        '<input type="text" class="pending-material-doc" data-key="' + key + '" value="' + escapeHtml(draft.materialDocument) + '" placeholder="Enter material document number">' +
+        '<label>Key In By</label>' +
+        '<input type="text" class="pending-key-in-by" data-key="' + key + '" value="' + escapeHtml(draft.keyInBy) + '" placeholder="Enter your name">' +
+        '<button class="btn btn-full" onclick="submitPendingBatch(\'' + key + '\')">Submit</button>' +
+        '<div id="pendingSubmitStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_') + '"></div>';
+
+      container.appendChild(card);
+    });
+
+    // wire up qty edits
+    document.querySelectorAll('.pending-qty-edit').forEach(function(input){
+      input.addEventListener('change', function(){
+        var key = input.dataset.key;
+        var idx = parseInt(input.dataset.idx, 10);
+        var val = parseFloat(input.value);
+        if(!val || val <= 0){
+          input.value = pendingDraft[key].items[idx].qty;
+          return;
+        }
+        pendingDraft[key].items[idx].qty = val;
+      });
+    });
+
+    // wire up material document / key in by fields
+    document.querySelectorAll('.pending-material-doc').forEach(function(input){
+      input.addEventListener('input', function(){
+        pendingDraft[input.dataset.key].materialDocument = input.value;
+      });
+    });
+    document.querySelectorAll('.pending-key-in-by').forEach(function(input){
+      input.addEventListener('input', function(){
+        pendingDraft[input.dataset.key].keyInBy = input.value;
+      });
+    });
+    document.querySelectorAll('.pending-plu-input').forEach(function(input){
+      input.addEventListener('input', function(){ pendingDraft[input.dataset.key].pluInput = input.value; });
+    });
+    document.querySelectorAll('.pending-qty-input').forEach(function(input){
+      input.addEventListener('input', function(){ pendingDraft[input.dataset.key].qtyInput = input.value; });
+    });
+  }
+
+  function removePendingItem(el){
+    var key = el.dataset.key;
+    var idx = parseInt(el.dataset.idx, 10);
+    if(pendingDraft[key].items.length <= 1){
+      alert('A batch must have at least one item.');
+      return;
+    }
+    pendingDraft[key].items.splice(idx, 1);
+    renderPendingListFiltered();
+  }
+
+  function addPendingItem(key){
+    var draft = pendingDraft[key];
+    var plu = (draft.pluInput || '').trim();
+    var qty = parseFloat(draft.qtyInput);
+    var statusEl = document.getElementById('pendingAddStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_'));
+
+    if(!plu){ statusEl.innerHTML = '<div class="status err">Enter a PLU code.</div>'; return; }
+    if(!qty || qty <= 0){ statusEl.innerHTML = '<div class="status err">Enter a valid quantity.</div>'; return; }
+
+    var match = masterlistByPlu[plu];
+    var already = draft.items.find(function(i){ return i.plu === plu; });
+    if(already){
+      already.qty += qty;
+    } else {
+      draft.items.push({
+        plu: plu,
+        description: match ? match.description : '',
+        material: match ? match.material : '',
+        uom: match ? match.uom : '',
+        qty: qty,
+        isNew: true
+      });
+    }
+
+    draft.pluInput = '';
+    draft.qtyInput = '';
+    statusEl.innerHTML = '';
+    renderPendingListFiltered();
+  }
+
+  function submitPendingBatch(key){
+    var draft = pendingDraft[key];
+    var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; });
+    var statusId = 'pendingSubmitStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_');
+    var statusEl = document.getElementById(statusId);
+
+    if(!draft.materialDocument || !draft.materialDocument.trim()){
+      statusEl.innerHTML = '<div class="status err">Material Document is required.</div>';
+      return;
+    }
+    if(!draft.keyInBy || !draft.keyInBy.trim()){
+      statusEl.innerHTML = '<div class="status err">Key In By is required.</div>';
+      return;
+    }
+
+    statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Submitting...</div>';
+
+    var itemsPayload = draft.items.map(function(it){
+      return {
+        plu: it.plu, description: it.description, material: it.material,
+        uom: it.uom, qty: it.qty, isNew: !!it.isNew
+      };
+    });
+
+    google.script.run
+      .withSuccessHandler(function(res){
+        draft.submitted = res.printData;
+        statusEl.innerHTML = '';
+        renderPendingListFiltered();
+      })
+      .withFailureHandler(function(err){
+        statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+      })
+      .submitITEntry(batch.sheetName, batch.batchTimestampMs, itemsPayload, draft.materialDocument.trim(), draft.keyInBy.trim());
+  }
+
+  function printBatch(key){
+    var draft = pendingDraft[key];
+    if(!draft || !draft.submitted) return;
+    openPrintView(draft.submitted);
+  }
+
+  function openPrintView(p){
+    var itemsRows = p.items.map(function(it){
+      return '<tr><td>' + escapeHtml(it.plu) + '</td><td>' + escapeHtml(it.description || '') + '</td><td>' + escapeHtml(String(it.qty)) + '</td></tr>';
+    }).join('');
+
+    var html =
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SHBN Bad Stock Log</title><style>' +
+      'body{font-family:Georgia, "Times New Roman", serif;color:#222;margin:32px;}' +
+      '.title{text-align:center;font-size:20px;font-weight:700;letter-spacing:0.5px;margin-bottom:2px;}' +
+      '.subtitle{text-align:center;font-size:12px;color:#666;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;}' +
+      '.meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:13px;margin-bottom:14px;border-top:1px solid #999;border-bottom:1px solid #999;padding:10px 0;}' +
+      '.meta div span{color:#666;}' +
+      '.meta div b{display:block;font-size:14px;}' +
+      'table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:30px;}' +
+      'thead{display:table-header-group;}' + /* explicit: repeat this on every printed page */
+      'tr{page-break-inside:avoid;}' +
+      '.doc-head-cell{border:none;padding:0 0 14px 0;text-align:left;}' +
+      'th,td{border:1px solid #999;padding:8px 10px;text-align:left;}' +
+      'th.col-head{background:#eee;text-transform:uppercase;font-size:11px;letter-spacing:0.3px;}' +
+      '.sign-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:50px;page-break-inside:avoid;}' +
+      '.sign-box{font-size:12px;}' +
+      '.sign-line{border-top:1px solid #333;margin-top:40px;padding-top:6px;}' +
+      '.sign-label{font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:0.4px;color:#444;}' +
+      '@media print{ body{margin:12mm;} }' +
+      '</style></head><body>' +
+      '<table>' +
+        '<thead>' +
+          '<tr><th colspan="3" class="doc-head-cell">' +
+            '<div class="title">SHBN &mdash; Bad Stock Log</div>' +
+            '<div class="subtitle">Bad Stock Report</div>' +
+            '<div class="meta">' +
+              '<div><span>Date</span><b>' + escapeHtml(p.date) + ', ' + escapeHtml(p.time) + '</b></div>' +
+              '<div><span>Bad Stock Category</span><b>' + escapeHtml(p.category) + '</b></div>' +
+              '<div><span>Staff</span><b>' + escapeHtml(p.staff) + '</b></div>' +
+              '<div><span>Supervisor</span><b>' + escapeHtml(p.supervisor) + '</b></div>' +
+              '<div><span>Material Document</span><b>' + escapeHtml(p.materialDocument) + '</b></div>' +
+              '<div><span>Key In By</span><b>' + escapeHtml(p.keyInBy) + '</b></div>' +
+            '</div>' +
+          '</th></tr>' +
+          '<tr><th class="col-head">PLU / Product Code</th><th class="col-head">Description</th><th class="col-head">Quantity</th></tr>' +
+        '</thead>' +
+        '<tbody>' + itemsRows + '</tbody>' +
+      '</table>' +
+      '<div class="sign-grid">' +
+        '<div class="sign-box"><div class="sign-line"></div><div class="sign-label">Staff</div>' + escapeHtml(p.staff) + '</div>' +
+        '<div class="sign-box"><div class="sign-line"></div><div class="sign-label">Supervisor</div>' + escapeHtml(p.supervisor) + '</div>' +
+        '<div class="sign-box"><div class="sign-line"></div><div class="sign-label">Manager</div>&nbsp;</div>' +
+        '<div class="sign-box"><div class="sign-line"></div><div class="sign-label">Key In By</div>' + escapeHtml(p.keyInBy) + '</div>' +
+      '</div>' +
+      '</body></html>';
+
+    var win = window.open('', '_blank');
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    setTimeout(function(){ win.focus(); win.print(); }, 300);
+  }
+
+  // ================= ADMIN =================
+
+  function unlockAdmin(){
+    var pw = document.getElementById('adminPasswordInput').value;
+    var statusEl = document.getElementById('adminLockStatus');
+
+    google.script.run
+      .withSuccessHandler(function(ok){
+        if(ok){
+          adminUnlocked = true;
+          document.getElementById('adminLockView').style.display = 'none';
+          document.getElementById('adminUnlockedView').style.display = 'block';
+          loadAdminPendingList();
+        } else {
+          statusEl.innerHTML = '<div class="status err">Incorrect password.</div>';
+        }
+      })
+      .withFailureHandler(function(err){
+        statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+      })
+      .checkAdminPassword(pw);
+  }
+
+  function submitMasterlistItem(){
+    var plu = document.getElementById('adminPlu').value.trim();
+    var description = document.getElementById('adminDescription').value.trim();
+    var material = document.getElementById('adminMaterial').value.trim();
+    var uom = document.getElementById('adminUom').value.trim();
+    var statusEl = document.getElementById('adminSaveStatus');
+
+    if(!plu || !description){
+      statusEl.innerHTML = '<div class="status err">PLU and Description are required.</div>';
+      return;
+    }
+
+    statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Saving...</div>';
+
+    google.script.run
+      .withSuccessHandler(function(res){
+        statusEl.innerHTML = '<div class="status ok">' + (res.updated ? 'Updated existing PLU in Masterlist.' : 'Added new item to Masterlist.') + '</div>';
+        document.getElementById('adminPlu').value = '';
+        document.getElementById('adminDescription').value = '';
+        document.getElementById('adminMaterial').value = '';
+        document.getElementById('adminUom').value = '';
+
+        // refresh local masterlist cache so New Entry / IT Entry lookups see it immediately
+        google.script.run.withSuccessHandler(function(list){
+          masterlist = list;
+          masterlistByPlu = {};
+          list.forEach(function(item){ masterlistByPlu[String(item.plu).trim()] = item; });
+        }).getMasterlist();
+      })
+      .withFailureHandler(function(err){
+        statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+      })
+      .addMasterlistItem(description, plu, material, uom);
+  }
+
+  var adminPendingEntries = [];
+
+  function loadAdminPendingList(){
+    document.getElementById('adminPendingList').innerHTML = '<div class="empty"><span class="spinner"></span> Loading...</div>';
+    document.getElementById('adminPendingEmpty').style.display = 'none';
+
+    google.script.run
+      .withSuccessHandler(function(entries){
+        adminPendingEntries = entries;
+        renderAdminPendingList();
+      })
+      .withFailureHandler(function(err){
+        document.getElementById('adminPendingList').innerHTML =
+          '<div class="status err">Failed to load pending transactions: ' + err.message + '</div>';
+      })
+      .getPendingEntries();
+  }
+
+  function renderAdminPendingList(){
+    var container = document.getElementById('adminPendingList');
+    container.innerHTML = '';
+
+    if(!adminPendingEntries.length){
+      document.getElementById('adminPendingEmpty').style.display = 'block';
+      return;
+    }
+    document.getElementById('adminPendingEmpty').style.display = 'none';
+
+    adminPendingEntries.forEach(function(batch){
+      var key = batch.sheetName + '::' + batch.batchTimestampMs;
+      var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
+      var itemsList = batch.items.map(function(it){
+        var label = it.description ? it.description : ('PLU ' + it.plu) + (it.description ? '' : ' (not in Masterlist)');
+        return escapeHtml(label) + ' &times; ' + escapeHtml(String(it.qty)) + (it.uom ? ' ' + escapeHtml(it.uom) : '');
+      }).join(', ');
+
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML =
+        '<div class="pending-card-header">' +
+          '<div><span class="cat-tag">' + escapeHtml(batch.category) + '</span></div>' +
+          '<div class="pending-meta">' + escapeHtml(batch.dateDisplay) + '</div>' +
+        '</div>' +
+        '<div class="pending-meta" style="margin-top:6px;"><b>' + escapeHtml(batch.staff) + '</b> &middot; ' + escapeHtml(batch.supervisor) + '</div>' +
+        '<div class="pending-meta" style="margin-top:8px;">' + itemsList + '</div>' +
+        '<button class="btn danger btn-full" onclick="deleteAdminPendingBatch(\'' + key + '\')">Delete Transaction</button>' +
+        '<div id="adminDeleteStatus_' + safeKey + '"></div>';
+      container.appendChild(card);
+    });
+  }
+
+  function deleteAdminPendingBatch(key){
+    var batch = adminPendingEntries.find(function(b){ return (b.sheetName + '::' + b.batchTimestampMs) === key; });
+    if(!batch) return;
+    var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
+    var statusEl = document.getElementById('adminDeleteStatus_' + safeKey);
+
+    var confirmed = confirm(
+      'Delete this pending transaction?\n\n' +
+      batch.category + ' \u00b7 ' + batch.dateDisplay + '\n' +
+      batch.staff + ' / ' + batch.supervisor + '\n\n' +
+      'This will permanently remove it from the Google Sheet and cannot be undone.'
+    );
+    if(!confirmed) return;
+
+    statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Deleting...</div>';
+
+    google.script.run
+      .withSuccessHandler(function(){
+        adminPendingEntries = adminPendingEntries.filter(function(b){ return (b.sheetName + '::' + b.batchTimestampMs) !== key; });
+        renderAdminPendingList();
+
+        // keep the IT Entry tab's cached data in sync too, in case it's already loaded
+        pendingEntries = pendingEntries.filter(function(b){ return pendingKey(b) !== key; });
+        delete pendingDraft[key];
+      })
+      .withFailureHandler(function(err){
+        statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+      })
+      .deletePendingBatch(batch.sheetName, batch.batchTimestampMs);
+  }
+
+  // ================= SHARED =================
+
+  function escapeHtml(str){
+    if(str === null || str === undefined) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
