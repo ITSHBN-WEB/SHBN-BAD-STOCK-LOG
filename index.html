@@ -279,6 +279,24 @@
 </div>
 
 <script>
+  // ---------- Force all free-text inputs to uppercase as the person types ----------
+  // Delegated on document so it also covers inputs created later (IT Entry's
+  // per-batch PLU / Material Document / Key In By fields). Password fields
+  // and number fields are untouched.
+  document.addEventListener('input', function(e){
+    var el = e.target;
+    if(el.tagName === 'INPUT' && el.type === 'text'){
+      var start = el.selectionStart, end = el.selectionEnd;
+      var upper = el.value.toUpperCase();
+      if(upper !== el.value){
+        el.value = upper;
+        if(document.activeElement === el && start !== null){
+          el.setSelectionRange(start, end);
+        }
+      }
+    }
+  });
+
   // ================= CROSS-ORIGIN API BRIDGE =================
   // This page is hosted on GitHub Pages, a different domain from the Apps
   // Script backend, so google.script.run (which only exists on
