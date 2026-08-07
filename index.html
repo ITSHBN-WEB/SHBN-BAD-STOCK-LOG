@@ -820,6 +820,8 @@
           '<button class="btn ghost" style="margin-top:0;" onclick="addPendingItem(\'' + key + '\')">Add</button>' +
         '</div>' +
         '<div id="pendingAddStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_') + '"></div>' +
+        '<button class="btn secondary btn-full" onclick="saveDraftChanges(\'' + key + '\')">Save Changes</button>' +
+        '<div id="pendingSaveStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_') + '"></div>' +
         '<hr class="divider">' +
         '<label>Material Document</label>' +
         '<input type="text" class="pending-material-doc" data-key="' + key + '" value="' + escapeHtml(draft.materialDocument) + '" placeholder="Enter material document number">' +
@@ -903,6 +905,41 @@
     draft.qtyInput = '';
     statusEl.innerHTML = '';
     renderPendingListFiltered();
+  }
+
+  function saveDraftChanges(key){
+    var draft = pendingDraft[key];
+    var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; });
+    var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
+    var statusEl = document.getElementById('pendingSaveStatus_' + safeKey);
+
+    if(!draft.items.length){
+      statusEl.innerHTML = '<div class="status err">A batch must have at least one item.</div>';
+      return;
+    }
+
+    statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Saving...</div>';
+
+    var itemsPayload = draft.items.map(function(it){
+      return {
+        plu: it.plu, description: it.description, material: it.material,
+        uom: it.uom, qty: it.qty, isNew: !!it.isNew
+      };
+    });
+
+    apiPost('saveITEntryDraft', {
+      sheetName: batch.sheetName,
+      batchTimestampMs: batch.batchTimestampMs,
+      items: itemsPayload
+    })
+      .then(function(){
+        draft.items.forEach(function(it){ it.isNew = false; });
+        statusEl.innerHTML = '<div class="status ok">Changes saved.</div>';
+        setTimeout(function(){ statusEl.innerHTML = ''; }, 1500);
+      })
+      .catch(function(err){
+        statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+      });
   }
 
   function submitPendingBatch(key){
