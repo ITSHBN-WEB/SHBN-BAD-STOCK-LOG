@@ -726,7 +726,6 @@
   }
 
   function pendingKey(batch){ return batch.sheetName + '::' + batch.batchTimestampMs; }
-  function safeKeyOf(key){ return key.replace(/[^a-zA-Z0-9]/g,'_'); }
 
   function renderCategoryPicker(){
     var picker = document.getElementById('categoryPicker');
@@ -782,7 +781,7 @@
       card.className = 'card';
 
       if(draft.submitted){
-        var safeKey = safeKeyOf(key);
+        var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
         card.innerHTML =
           '<div class="pending-card-header">' +
             '<div><span class="cat-tag">' + escapeHtml(batch.category) + '</span></div>' +
@@ -810,6 +809,8 @@
         '</tr>';
       }).join('');
 
+      var pendingSafeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
+
       card.innerHTML =
         '<div class="pending-card-header">' +
           '<div><span class="cat-tag">' + escapeHtml(batch.category) + '</span></div>' +
@@ -820,26 +821,26 @@
           '<thead><tr><th>Description</th><th>PLU</th><th>UOM</th><th>Qty</th><th></th></tr></thead>' +
           '<tbody>' + itemsHtml + '</tbody>' +
         '</table>' +
-        '<div class="btn-row">' +
-          '<button class="btn secondary" onclick="printPendingBatchLive(\'' + key + '\')">Print Here</button>' +
-          '<button class="btn ghost" id="sendPrintBtn_' + safeKeyOf(key) + '" onclick="sendToPrintStation(\'' + key + '\')">Send to Print Station</button>' +
-        '</div>' +
-        '<div id="sendPrintStatus_' + safeKeyOf(key) + '"></div>' +
         '<div class="add-item-row">' +
           '<div><label>Add PLU</label><input type="text" class="pending-plu-input" data-key="' + key + '" placeholder="PLU code"></div>' +
           '<div style="flex:0 0 90px;"><label>Qty</label><input type="number" min="0" step="any" class="pending-qty-input" data-key="' + key + '" placeholder="0"></div>' +
           '<button class="btn ghost" style="margin-top:0;" onclick="addPendingItem(\'' + key + '\')">Add</button>' +
         '</div>' +
-        '<div id="pendingAddStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_') + '"></div>' +
+        '<div id="pendingAddStatus_' + pendingSafeKey + '"></div>' +
         '<button class="btn secondary btn-full" onclick="saveDraftChanges(\'' + key + '\')">Save Changes</button>' +
-        '<div id="pendingSaveStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_') + '"></div>' +
+        '<div id="pendingSaveStatus_' + pendingSafeKey + '"></div>' +
+        '<div class="btn-row">' +
+        '<button class="btn secondary" onclick="printBatch(\'' + key + '\')">Print Here</button>' +
+        '<button class="btn ghost" id="sendPrintBtn_' + pendingSafeKey + '" onclick="sendToPrintStation(\'' + key + '\')">Send to Print Station</button>' +
+        '</div>' +
+        '<div id="sendPrintStatus_' + pendingSafeKey + '"></div>' +
         '<hr class="divider">' +
         '<label>Material Document</label>' +
         '<input type="text" class="pending-material-doc" data-key="' + key + '" value="' + escapeHtml(draft.materialDocument) + '" placeholder="Enter material document number">' +
         '<label>Key In By</label>' +
         '<input type="text" class="pending-key-in-by" data-key="' + key + '" value="' + escapeHtml(draft.keyInBy) + '" placeholder="Enter your name">' +
         '<button class="btn btn-full" onclick="submitPendingBatch(\'' + key + '\')">Submit</button>' +
-        '<div id="pendingSubmitStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_') + '"></div>';
+        '<div id="pendingSubmitStatus_' + pendingSafeKey + '"></div>';
 
       container.appendChild(card);
     });
@@ -918,9 +919,33 @@
     renderPendingListFiltered();
   }
 
+  // Saves the current in-memory items for a still-pending batch to the sheet.
+  // Returns a promise so both Save Changes and Send to Print Station (which
+  // needs the sheet to reflect the latest edits before queuing) can reuse it.
+  function persistPendingDraft(key){
+    var draft = pendingDraft[key];
+    var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; }) ||
+                adminPendingEntries.find(function(b){ return pendingKey(b) === key; });
+    if(!draft.items.length) return Promise.reject(new Error('A batch must have at least one item.'));
+
+    var itemsPayload = draft.items.map(function(it){
+      return {
+        plu: it.plu, description: it.description, material: it.material,
+        uom: it.uom, qty: it.qty, isNew: !!it.isNew
+      };
+    });
+
+    return apiPost('saveITEntryDraft', {
+      sheetName: batch.sheetName,
+      batchTimestampMs: batch.batchTimestampMs,
+      items: itemsPayload
+    }).then(function(){
+      draft.items.forEach(function(it){ it.isNew = false; });
+    });
+  }
+
   function saveDraftChanges(key){
     var draft = pendingDraft[key];
-    var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; });
     var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
     var statusEl = document.getElementById('pendingSaveStatus_' + safeKey);
 
@@ -931,20 +956,8 @@
 
     statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Saving...</div>';
 
-    var itemsPayload = draft.items.map(function(it){
-      return {
-        plu: it.plu, description: it.description, material: it.material,
-        uom: it.uom, qty: it.qty, isNew: !!it.isNew
-      };
-    });
-
-    apiPost('saveITEntryDraft', {
-      sheetName: batch.sheetName,
-      batchTimestampMs: batch.batchTimestampMs,
-      items: itemsPayload
-    })
+    persistPendingDraft(key)
       .then(function(){
-        draft.items.forEach(function(it){ it.isNew = false; });
         statusEl.innerHTML = '<div class="status ok">Changes saved.</div>';
         setTimeout(function(){ statusEl.innerHTML = ''; }, 1500);
       })
@@ -996,59 +1009,28 @@
 
   function printBatch(key){
     var draft = pendingDraft[key];
-    if(!draft || !draft.submitted) return;
-    openPrintView(draft.submitted);
-  }
+    if(!draft) return;
 
-  // ---------- Print Here / Send to Print Station for a batch that hasn't
-  // been Submitted yet (no Material Document / Key In By required). Saves
-  // whatever's currently in the draft first, so the printed/queued copy
-  // matches what's on screen, then prints locally or queues remotely. ----------
+    if(draft.submitted){
+      openPrintView(draft.submitted);
+      return;
+    }
 
-  function buildPrintDataFromDraft(batch, draft){
-    var d = new Date(batch.batchTimestampMs);
-    var dateStr = d.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
-    var timeStr = d.toLocaleTimeString([], { hour:'numeric', minute:'2-digit', hour12:true });
-    return {
-      date: dateStr,
-      time: timeStr,
+    // Not submitted yet — print with whatever's currently in this card,
+    // leaving Material Document / Key In By blank for hand-writing.
+    var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; }) ||
+                adminPendingEntries.find(function(b){ return pendingKey(b) === key; });
+    if(!batch) return;
+    openPrintView({
+      date: batch.dateDisplay,
+      time: '',
       category: batch.category,
       staff: batch.staff,
       supervisor: batch.supervisor,
       materialDocument: draft.materialDocument || '',
       keyInBy: draft.keyInBy || '',
-      keyInDate: '',
-      items: draft.items.map(function(it){ return { plu: it.plu, description: it.description, qty: it.qty }; })
-    };
-  }
-
-  function printPendingBatchLive(key){
-    var draft = pendingDraft[key];
-    var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; }) ||
-                adminPendingEntries.find(function(b){ return pendingKey(b) === key; });
-    if(!draft || !batch) return;
-    if(!draft.items.length){ alert('Add at least one item before printing.'); return; }
-
-    var statusEl = document.getElementById('sendPrintStatus_' + safeKeyOf(key));
-    if(statusEl) statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Preparing...</div>';
-
-    var itemsPayload = draft.items.map(function(it){
-      return { plu: it.plu, description: it.description, material: it.material, uom: it.uom, qty: it.qty, isNew: !!it.isNew };
+      items: draft.items
     });
-
-    apiPost('saveITEntryDraft', {
-      sheetName: batch.sheetName,
-      batchTimestampMs: batch.batchTimestampMs,
-      items: itemsPayload
-    })
-      .then(function(){
-        draft.items.forEach(function(it){ it.isNew = false; });
-        if(statusEl) statusEl.innerHTML = '';
-        openPrintView(buildPrintDataFromDraft(batch, draft));
-      })
-      .catch(function(err){
-        if(statusEl) statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
-      });
   }
 
   function openPrintView(p){
@@ -1082,7 +1064,7 @@
             '<div class="title">SHBN &mdash; Bad Stock Log</div>' +
             '<div class="subtitle">Bad Stock Report</div>' +
             '<div class="meta">' +
-              '<div><span>Date</span><b>' + escapeHtml(p.date) + ', ' + escapeHtml(p.time) + '</b></div>' +
+              '<div><span>Date</span><b>' + escapeHtml(p.date) + (p.time ? ', ' + escapeHtml(p.time) : '') + '</b></div>' +
               '<div><span>Bad Stock Category</span><b>' + escapeHtml(p.category) + '</b></div>' +
               '<div><span>Staff</span><b>' + escapeHtml(p.staff) + '</b></div>' +
               '<div><span>Supervisor</span><b>' + escapeHtml(p.supervisor) + '</b></div>' +
@@ -1109,50 +1091,32 @@
     setTimeout(function(){ win.focus(); win.print(); }, 300);
   }
 
-  // ---------- Send to Print Station ----------
+  // ---------- Send to Print Station (new — nothing above this point was changed) ----------
   // Queues this batch for the shared Print Station page instead of printing
-  // locally. Polls for the result so the person gets a confirmation either
-  // way. Works whether the batch has already been Submitted (Material
-  // Document / Key In By stamped) or is still pending — in the pending case
-  // it saves the current draft first so the queued copy matches what's on
-  // screen, and Material Document / Key In By may be blank.
+  // locally. Polls for the result so the person gets a confirmation either way.
 
   function sendToPrintStation(key){
     var draft = pendingDraft[key];
     var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; }) ||
                 adminPendingEntries.find(function(b){ return pendingKey(b) === key; });
-    if(!batch) return;
-
-    var safeKey = safeKeyOf(key);
+    if(!draft || !batch) return;
+    var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
     var btn = document.getElementById('sendPrintBtn_' + safeKey);
     var statusEl = document.getElementById('sendPrintStatus_' + safeKey);
 
-    if(draft && !draft.submitted && (!draft.items || !draft.items.length)){
-      alert('Add at least one item before sending to print.');
-      return;
-    }
-
     if(btn) btn.disabled = true;
-    statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Sending...</div>';
 
-    var savePromise;
-    if(draft && !draft.submitted){
-      var itemsPayload = draft.items.map(function(it){
-        return { plu: it.plu, description: it.description, material: it.material, uom: it.uom, qty: it.qty, isNew: !!it.isNew };
-      });
-      savePromise = apiPost('saveITEntryDraft', {
-        sheetName: batch.sheetName,
-        batchTimestampMs: batch.batchTimestampMs,
-        items: itemsPayload
-      }).then(function(){
-        draft.items.forEach(function(it){ it.isNew = false; });
-      });
-    } else {
-      savePromise = Promise.resolve();
-    }
+    // If this batch hasn't been submitted yet, save its current items to
+    // the sheet first — the Print Station reads straight from the sheet
+    // (getBatchPrintData), so an unsaved edit here would otherwise print
+    // stale data. Already-completed batches skip straight to queuing.
+    var ensureSaved = draft.submitted
+      ? Promise.resolve()
+      : (statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Saving changes...</div>', persistPendingDraft(key));
 
-    savePromise
+    ensureSaved
       .then(function(){
+        statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Sending...</div>';
         return apiPost('requestPrint', { sheetName: batch.sheetName, batchTimestampMs: batch.batchTimestampMs });
       })
       .then(function(res){
