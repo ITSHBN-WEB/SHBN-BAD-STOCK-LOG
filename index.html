@@ -781,6 +781,7 @@
       card.className = 'card';
 
       if(draft.submitted){
+        var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
         card.innerHTML =
           '<div class="pending-card-header">' +
             '<div><span class="cat-tag">' + escapeHtml(batch.category) + '</span></div>' +
@@ -788,7 +789,11 @@
           '</div>' +
           '<div class="pending-meta" style="margin-top:6px;"><b>' + escapeHtml(batch.staff) + '</b> &middot; ' + escapeHtml(batch.supervisor) + '</div>' +
           '<div class="status ok" style="margin-top:12px;">Completed &middot; Material Document ' + escapeHtml(draft.materialDocument) + '</div>' +
-          '<button class="btn secondary btn-full" onclick="printBatch(\'' + key + '\')">Print</button>';
+          '<div class="btn-row">' +
+          '<button class="btn secondary" onclick="printBatch(\'' + key + '\')">Print Here</button>' +
+          '<button class="btn ghost" id="sendPrintBtn_' + safeKey + '" onclick="sendToPrintStation(\'' + key + '\')">Send to Print Station</button>' +
+          '</div>' +
+          '<div id="sendPrintStatus_' + safeKey + '"></div>';
         container.appendChild(card);
         return;
       }
@@ -1045,6 +1050,73 @@
     win.document.write(html);
     win.document.close();
     setTimeout(function(){ win.focus(); win.print(); }, 300);
+  }
+
+  // ---------- Send to Print Station (new — nothing above this point was changed) ----------
+  // Queues this batch for the shared Print Station page instead of printing
+  // locally. Polls for the result so the person gets a confirmation either way.
+
+  function sendToPrintStation(key){
+    var batch = pendingEntries.find(function(b){ return pendingKey(b) === key; }) ||
+                adminPendingEntries.find(function(b){ return pendingKey(b) === key; });
+    if(!batch) return;
+    var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
+    var btn = document.getElementById('sendPrintBtn_' + safeKey);
+    var statusEl = document.getElementById('sendPrintStatus_' + safeKey);
+
+    if(btn) btn.disabled = true;
+    statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Sending...</div>';
+
+    apiPost('requestPrint', { sheetName: batch.sheetName, batchTimestampMs: batch.batchTimestampMs })
+      .then(function(res){
+        statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Waiting for Print Station...</div>';
+        pollPrintRequest(res.requestId, safeKey, btn, statusEl);
+      })
+      .catch(function(err){
+        statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+        if(btn) btn.disabled = false;
+      });
+  }
+
+  // apiGet() above only takes a bare action name, so the request id is
+  // appended to the query string directly here rather than changing that
+  // shared helper.
+  function fetchPrintRequestStatus(requestId){
+    return fetch(EXEC_URL + '?action=getPrintRequestStatus&requestId=' + encodeURIComponent(requestId))
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (!json.success) throw new Error(json.error || 'Request failed.');
+        return json.data;
+      });
+  }
+
+  function pollPrintRequest(requestId, safeKey, btn, statusEl){
+    var attempts = 0;
+    var maxAttempts = 40; // ~2 minutes at 3s intervals
+    var interval = setInterval(function(){
+      attempts++;
+      fetchPrintRequestStatus(requestId)
+        .then(function(data){
+          if(data.status === 'PRINTED'){
+            clearInterval(interval);
+            statusEl.innerHTML = '<div class="status ok">Printed at the Print Station.</div>';
+            if(btn) btn.disabled = false;
+          } else if(data.status === 'CANCELLED'){
+            clearInterval(interval);
+            statusEl.innerHTML = '<div class="status err">Print request was cancelled at the Print Station.</div>';
+            if(btn) btn.disabled = false;
+          } else if(attempts >= maxAttempts){
+            clearInterval(interval);
+            statusEl.innerHTML = '<div class="status err">Still waiting — make sure the Print Station tab is open.</div>';
+            if(btn) btn.disabled = false;
+          }
+        })
+        .catch(function(err){
+          clearInterval(interval);
+          statusEl.innerHTML = '<div class="status err">Error: ' + err.message + '</div>';
+          if(btn) btn.disabled = false;
+        });
+    }, 3000);
   }
 
   // ================= ADMIN =================
