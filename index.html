@@ -338,7 +338,7 @@
   var currentLookup = null;    // currently matched PLU item awaiting quantity (New Entry)
   var cart = [];               // { plu, description, material, uom, qty }
   var pendingEntries = [];     // raw data from getPendingEntries()
-  var pendingDraft = {};       // keyed by batchTimestampMs -> { items, materialDocument, keyInBy }
+  var pendingDraft = {};       // keyed by txnId -> { items, materialDocument, keyInBy }
   var adminUnlocked = false;
   var appCategories = [];      // loaded once from getCategories()
   var selectedPendingCategory = null; // which category is currently shown in IT Entry
@@ -725,7 +725,7 @@
       });
   }
 
-  function pendingKey(batch){ return batch.sheetName + '::' + batch.batchTimestampMs; }
+  function pendingKey(batch){ return batch.txnId; }
 
   function renderCategoryPicker(){
     var picker = document.getElementById('categoryPicker');
@@ -936,8 +936,7 @@
     });
 
     return apiPost('saveITEntryDraft', {
-      sheetName: batch.sheetName,
-      batchTimestampMs: batch.batchTimestampMs,
+      txnId: batch.txnId,
       items: itemsPayload
     }).then(function(){
       draft.items.forEach(function(it){ it.isNew = false; });
@@ -991,8 +990,7 @@
     });
 
     apiPost('submitITEntry', {
-      sheetName: batch.sheetName,
-      batchTimestampMs: batch.batchTimestampMs,
+      txnId: batch.txnId,
       items: itemsPayload,
       materialDocument: draft.materialDocument.trim(),
       keyInBy: draft.keyInBy.trim()
@@ -1117,7 +1115,7 @@
     ensureSaved
       .then(function(){
         statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Sending...</div>';
-        return apiPost('requestPrint', { sheetName: batch.sheetName, batchTimestampMs: batch.batchTimestampMs });
+        return apiPost('requestPrint', { txnId: batch.txnId });
       })
       .then(function(res){
         statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Waiting for Print Station...</div>';
@@ -1254,7 +1252,7 @@
     document.getElementById('adminPendingEmpty').style.display = 'none';
 
     adminPendingEntries.forEach(function(batch){
-      var key = batch.sheetName + '::' + batch.batchTimestampMs;
+      var key = batch.txnId;
       var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
       var itemsList = batch.items.map(function(it){
         var label = it.description ? it.description : ('PLU ' + it.plu) + (it.description ? '' : ' (not in Masterlist)');
@@ -1277,7 +1275,7 @@
   }
 
   function deleteAdminPendingBatch(key){
-    var batch = adminPendingEntries.find(function(b){ return (b.sheetName + '::' + b.batchTimestampMs) === key; });
+    var batch = adminPendingEntries.find(function(b){ return b.txnId === key; });
     if(!batch) return;
     var safeKey = key.replace(/[^a-zA-Z0-9]/g,'_');
     var statusEl = document.getElementById('adminDeleteStatus_' + safeKey);
@@ -1292,9 +1290,9 @@
 
     statusEl.innerHTML = '<div class="status ok"><span class="spinner"></span> Deleting...</div>';
 
-    apiPost('deletePendingBatch', { sheetName: batch.sheetName, batchTimestampMs: batch.batchTimestampMs })
+    apiPost('deletePendingBatch', { txnId: batch.txnId })
       .then(function(){
-        adminPendingEntries = adminPendingEntries.filter(function(b){ return (b.sheetName + '::' + b.batchTimestampMs) !== key; });
+        adminPendingEntries = adminPendingEntries.filter(function(b){ return b.txnId !== key; });
         renderAdminPendingList();
 
         // keep the IT Entry tab's cached data in sync too, in case it's already loaded
