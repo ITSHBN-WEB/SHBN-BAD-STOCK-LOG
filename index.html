@@ -384,6 +384,15 @@
 
           enterStep2();
           renderCart();
+
+          // Restore an in-progress PLU/qty lookup that hadn't been added
+          // to the cart yet when the connection dropped or the page was
+          // refreshed, so nothing the person typed gets lost.
+          if(draft.pluInput){
+            document.getElementById('pluInput').value = draft.pluInput;
+            lookupPlu();
+            if(draft.qtyInput) document.getElementById('qtyInput').value = draft.qtyInput;
+          }
         } else {
           document.getElementById('step1View').style.display = 'block';
         }
@@ -410,15 +419,23 @@
   // ================= NEW ENTRY =================
 
   // ---------- Draft persistence (survives refresh / connection drops) ----------
+  // Persists: staff/supervisor/category, the whole cart, AND whatever is
+  // currently sitting in the PLU / Quantity fields — so even an item the
+  // person was mid-way through entering (looked up but not yet added to
+  // the list) survives a lost connection or an accidental refresh.
   var DRAFT_KEY = 'shbn_bad_stock_draft_v1';
 
   function saveDraft(){
     try {
+      var pluEl = document.getElementById('pluInput');
+      var qtyEl = document.getElementById('qtyInput');
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         staff: sessionStaff,
         supervisor: sessionSupervisor,
         category: sessionCategory,
-        cart: cart
+        cart: cart,
+        pluInput: pluEl ? pluEl.value : '',
+        qtyInput: qtyEl ? qtyEl.value : ''
       }));
     } catch (e) { /* storage unavailable — fail silently, not critical */ }
   }
@@ -554,8 +571,17 @@
     lookupPlu();
   }
 
+  // Every keystroke both re-runs the lookup AND persists the in-progress
+  // PLU text to the draft, so a lost connection mid-typing doesn't wipe it.
   document.getElementById('pluInput').addEventListener('input', function(){
     lookupPlu();
+    saveDraft();
+  });
+
+  // The quantity field previously had no persistence at all — add it so a
+  // typed-but-not-yet-added quantity also survives a refresh.
+  document.getElementById('qtyInput').addEventListener('input', function(){
+    saveDraft();
   });
 
   function addToCart(){
@@ -1032,8 +1058,9 @@
   }
 
   function openPrintView(p){
+    // Includes a UOM column, right of Quantity, on the printed slip.
     var itemsRows = p.items.map(function(it){
-      return '<tr><td>' + escapeHtml(it.plu) + '</td><td>' + escapeHtml(it.description || '') + '</td><td>' + escapeHtml(String(it.qty)) + '</td></tr>';
+      return '<tr><td>' + escapeHtml(it.plu) + '</td><td>' + escapeHtml(it.description || '') + '</td><td>' + escapeHtml(String(it.qty)) + '</td><td>' + escapeHtml(it.uom || '') + '</td></tr>';
     }).join('');
 
     var html =
@@ -1058,7 +1085,7 @@
       '</style></head><body>' +
       '<table>' +
         '<thead>' +
-          '<tr><th colspan="3" class="doc-head-cell">' +
+          '<tr><th colspan="4" class="doc-head-cell">' +
             '<div class="title">SHBN &mdash; Bad Stock Log</div>' +
             '<div class="subtitle">Bad Stock Report</div>' +
             '<div class="meta">' +
@@ -1070,7 +1097,7 @@
               '<div><span>Key In By</span><b>' + escapeHtml(p.keyInBy) + '</b></div>' +
             '</div>' +
           '</th></tr>' +
-          '<tr><th class="col-head">PLU / Product Code</th><th class="col-head">Description</th><th class="col-head">Quantity</th></tr>' +
+          '<tr><th class="col-head">PLU / Product Code</th><th class="col-head">Description</th><th class="col-head">Quantity</th><th class="col-head">UOM</th></tr>' +
         '</thead>' +
         '<tbody>' + itemsRows + '</tbody>' +
       '</table>' +
