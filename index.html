@@ -204,7 +204,7 @@
 
         <div id="qtySection" style="display:none;">
           <label>Quantity</label>
-          <input type="number" id="qtyInput" min="0" step="any" placeholder="Enter quantity">
+          <input type="number" id="qtyInput" min="0" max="99.99" step="0.01" placeholder="Enter quantity (max 99.99)">
           <button class="btn btn-full" onclick="addToCart()">Add to List</button>
         </div>
       </div>
@@ -511,12 +511,46 @@
   var unmatchedConfirmed = false;
   var lastLookedUpPlu = '';
 
+  // ---------- Shared quantity rules: max 99.99, 2 decimal places ----------
+  // Used everywhere a quantity gets added or edited (New Entry cart, IT
+  // Entry pending items). Rounds to 2dp; caller decides whether to also
+  // enforce the 99.99 cap (single-entry adds are capped with an alert;
+  // summed duplicate-PLU totals are only rounded, not re-capped, since a
+  // legitimate running total for one PLU can exceed 99.99).
+  var MAX_QTY = 99.99;
+  function roundQty(val){
+    return Math.round(val * 100) / 100;
+  }
+
+  // ---------- Weighing-scale barcode detection ----------
+  // Weighing-scale stickers print a 13-digit barcode like 2850046000000:
+  // a fixed "28" prefix, then a 5-digit PLU code, then 6 more digits
+  // (weight/price/checksum, which vary and are ignored). If what's typed
+  // or scanned into the PLU field matches that exact shape, silently swap
+  // it for just the embedded 5-digit PLU so the lookup and everything
+  // downstream (cart, sheet) sees a normal PLU code instead of the full
+  // barcode. Anything else (manually typed PLU codes, barcodes that don't
+  // start with 28, wrong length) passes through unchanged.
+  function extractPluFromBarcode(raw){
+    var digits = (raw || '').trim();
+    if(/^28\d{11}$/.test(digits)){
+      return digits.substring(2, 7);
+    }
+    return digits;
+  }
+
   document.getElementById('pluInput').addEventListener('keydown', function(e){
     if(e.key === 'Enter'){ e.preventDefault(); lookupPlu(); }
   });
 
   function lookupPlu(){
-    var plu = document.getElementById('pluInput').value.trim();
+    var rawPlu = document.getElementById('pluInput').value.trim();
+    var plu = extractPluFromBarcode(rawPlu);
+    if(plu !== rawPlu){
+      // Reflect the interpreted PLU back into the field so what's shown
+      // (and later added to the cart) is the short code, not the barcode.
+      document.getElementById('pluInput').value = plu;
+    }
     var previewEl = document.getElementById('lookupPreview');
     var qtySection = document.getElementById('qtySection');
 
@@ -591,10 +625,17 @@
       alert('Please enter a valid quantity.');
       return;
     }
+    if(qty > MAX_QTY){
+      alert('Maximum quantity allowed is ' + MAX_QTY + '.');
+      return;
+    }
+    qty = roundQty(qty); // accepts up to 3 decimals typed, stores only 2
 
     var existing = cart.find(function(c){ return c.plu === currentLookup.plu; });
     if(existing){
-      existing.qty += qty;
+      // Duplicate PLU: quantities add up, rounded back to 2 decimals — not
+      // re-capped at 99.99, since a legitimate running total can exceed it.
+      existing.qty = roundQty(existing.qty + qty);
     } else {
       cart.push({
         plu: currentLookup.plu,
@@ -649,7 +690,7 @@
         '<td>' + descDisplay + '</td>' +
         '<td>' + escapeHtml(item.plu) + '</td>' +
         '<td>' + uomDisplay + '</td>' +
-        '<td><div class="qty-cell"><input type="number" min="0" step="any" value="' + item.qty + '" data-idx="' + idx + '" class="qty-edit"></div></td>' +
+        '<td><div class="qty-cell"><input type="number" min="0" max="' + MAX_QTY + '" step="0.01" value="' + item.qty + '" data-idx="' + idx + '" class="qty-edit"></div></td>' +
         '<td><span class="remove-btn" data-idx="' + idx + '">&times;</span></td>';
       tbody.appendChild(tr);
     });
@@ -662,7 +703,14 @@
           input.value = cart[idx].qty;
           return;
         }
+        if(val > MAX_QTY){
+          alert('Maximum quantity allowed is ' + MAX_QTY + '.');
+          input.value = cart[idx].qty;
+          return;
+        }
+        val = roundQty(val);
         cart[idx].qty = val;
+        input.value = val;
         saveDraft();
       });
     });
@@ -830,7 +878,7 @@
           '<td>' + descDisplay + '</td>' +
           '<td>' + escapeHtml(item.plu) + '</td>' +
           '<td>' + escapeHtml(item.uom || '\u2014') + '</td>' +
-          '<td><input type="number" min="0" step="any" value="' + item.qty + '" data-key="' + key + '" data-idx="' + idx + '" class="pending-qty-edit"></td>' +
+          '<td><input type="number" min="0" max="' + MAX_QTY + '" step="0.01" value="' + item.qty + '" data-key="' + key + '" data-idx="' + idx + '" class="pending-qty-edit"></td>' +
           '<td><span class="remove-btn" data-key="' + key + '" data-idx="' + idx + '" onclick="removePendingItem(this)">&times;</span></td>' +
         '</tr>';
       }).join('');
@@ -849,7 +897,7 @@
         '</table>' +
         '<div class="add-item-row">' +
           '<div><label>Add PLU</label><input type="text" class="pending-plu-input" data-key="' + key + '" placeholder="PLU code"></div>' +
-          '<div style="flex:0 0 90px;"><label>Qty</label><input type="number" min="0" step="any" class="pending-qty-input" data-key="' + key + '" placeholder="0"></div>' +
+          '<div style="flex:0 0 90px;"><label>Qty</label><input type="number" min="0" max="' + MAX_QTY + '" step="0.01" class="pending-qty-input" data-key="' + key + '" placeholder="0"></div>' +
           '<button class="btn ghost" style="margin-top:0;" onclick="addPendingItem(\'' + key + '\')">Add</button>' +
         '</div>' +
         '<div id="pendingAddStatus_' + pendingSafeKey + '"></div>' +
@@ -881,7 +929,14 @@
           input.value = pendingDraft[key].items[idx].qty;
           return;
         }
+        if(val > MAX_QTY){
+          alert('Maximum quantity allowed is ' + MAX_QTY + '.');
+          input.value = pendingDraft[key].items[idx].qty;
+          return;
+        }
+        val = roundQty(val);
         pendingDraft[key].items[idx].qty = val;
+        input.value = val;
       });
     });
 
@@ -917,17 +972,21 @@
 
   function addPendingItem(key){
     var draft = pendingDraft[key];
-    var plu = (draft.pluInput || '').trim();
+    var plu = extractPluFromBarcode((draft.pluInput || '').trim());
     var qty = parseFloat(draft.qtyInput);
     var statusEl = document.getElementById('pendingAddStatus_' + key.replace(/[^a-zA-Z0-9]/g,'_'));
 
     if(!plu){ statusEl.innerHTML = '<div class="status err">Enter a PLU code.</div>'; return; }
     if(!qty || qty <= 0){ statusEl.innerHTML = '<div class="status err">Enter a valid quantity.</div>'; return; }
+    if(qty > MAX_QTY){ statusEl.innerHTML = '<div class="status err">Maximum quantity allowed is ' + MAX_QTY + '.</div>'; return; }
+    qty = roundQty(qty); // accepts up to 3 decimals typed, stores only 2
 
     var match = masterlistByPlu[plu];
     var already = draft.items.find(function(i){ return i.plu === plu; });
     if(already){
-      already.qty += qty;
+      // Duplicate PLU: quantities add up, rounded back to 2 decimals — not
+      // re-capped at 99.99, since a legitimate running total can exceed it.
+      already.qty = roundQty(already.qty + qty);
     } else {
       draft.items.push({
         plu: plu,
