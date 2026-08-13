@@ -523,17 +523,21 @@
   }
 
   // ---------- Weighing-scale barcode detection ----------
-  // Weighing-scale stickers print a 13-digit barcode like 2850046000000:
-  // a fixed "28" prefix, then a 5-digit PLU code, then 6 more digits
-  // (weight/price/checksum, which vary and are ignored). If what's typed
-  // or scanned into the PLU field matches that exact shape, silently swap
-  // it for just the embedded 5-digit PLU so the lookup and everything
+  // Weighing-scale stickers print barcodes like 2850046000000 (13 digits)
+  // or 285004600072000600 (18 digits): a fixed "28" prefix, then a 5-digit
+  // PLU code, then a variable number of trailing digits (weight/price/
+  // checksum, which differ by scale/format and are ignored either way). If
+  // what's typed or scanned into the PLU field matches that shape — starts
+  // with "28" and has at least 13 digits total — silently swap it for just
+  // the embedded 5-digit PLU (always the 5 digits right after "28",
+  // regardless of how many digits follow) so the lookup and everything
   // downstream (cart, sheet) sees a normal PLU code instead of the full
-  // barcode. Anything else (manually typed PLU codes, barcodes that don't
-  // start with 28, wrong length) passes through unchanged.
+  // barcode. The 13-digit minimum keeps this from misfiring on a plain
+  // manually-typed PLU that happens to start with "28" (e.g. "28046").
+  // Anything shorter, or not starting with 28, passes through unchanged.
   function extractPluFromBarcode(raw){
     var digits = (raw || '').trim();
-    if(/^28\d{11}$/.test(digits)){
+    if(/^28\d{11,}$/.test(digits)){
       return digits.substring(2, 7);
     }
     return digits;
