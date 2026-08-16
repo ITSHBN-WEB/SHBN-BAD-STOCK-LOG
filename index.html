@@ -904,6 +904,7 @@
           '<div style="flex:0 0 90px;"><label>Qty</label><input type="number" min="0" max="' + MAX_QTY + '" step="0.01" class="pending-qty-input" data-key="' + key + '" placeholder="0"></div>' +
           '<button class="btn ghost" style="margin-top:0;" onclick="addPendingItem(\'' + key + '\')">Add</button>' +
         '</div>' +
+        '<div id="pendingAddPreview_' + pendingSafeKey + '"></div>' +
         '<div id="pendingAddStatus_' + pendingSafeKey + '"></div>' +
         '<button class="btn secondary btn-full" onclick="saveDraftChanges(\'' + key + '\')">Save Changes</button>' +
         '<div id="pendingSaveStatus_' + pendingSafeKey + '"></div>' +
@@ -956,7 +957,10 @@
       });
     });
     document.querySelectorAll('.pending-plu-input').forEach(function(input){
-      input.addEventListener('input', function(){ pendingDraft[input.dataset.key].pluInput = input.value; });
+      input.addEventListener('input', function(){
+        pendingDraft[input.dataset.key].pluInput = input.value;
+        renderPendingAddPreview(input.dataset.key);
+      });
     });
     document.querySelectorAll('.pending-qty-input').forEach(function(input){
       input.addEventListener('input', function(){ pendingDraft[input.dataset.key].qtyInput = input.value; });
@@ -972,6 +976,37 @@
     }
     pendingDraft[key].items.splice(idx, 1);
     renderPendingListFiltered();
+  }
+
+  // Live preview under IT Entry's "Add PLU" field — mirrors New Entry's
+  // lookupPlu() preview so staff can see the Description/UOM before
+  // committing the item, instead of only finding out after clicking Add.
+  // Also runs scanned codes through the same weighing-scale barcode
+  // detection as New Entry, so a scan here behaves identically.
+  function renderPendingAddPreview(key){
+    var draft = pendingDraft[key];
+    var previewEl = document.getElementById('pendingAddPreview_' + key.replace(/[^a-zA-Z0-9]/g,'_'));
+    if(!previewEl) return;
+
+    var raw = (draft.pluInput || '').trim();
+    if(!raw){
+      previewEl.innerHTML = '';
+      return;
+    }
+
+    var plu = extractPluFromBarcode(raw);
+    var match = masterlistByPlu[plu];
+
+    if(match){
+      previewEl.innerHTML =
+        '<div class="lookup-preview">' +
+        '<div class="row"><span>Description</span><b>' + escapeHtml(match.description) + '</b></div>' +
+        '<div class="row"><span>UOM</span><b>' + escapeHtml(match.uom) + '</b></div>' +
+        '</div>';
+    } else {
+      previewEl.innerHTML =
+        '<div class="lookup-preview notfound">PLU "' + escapeHtml(plu) + '" was not found in the Masterlist. It can still be added, but will be flagged red until an admin adds it.</div>';
+    }
   }
 
   function addPendingItem(key){
