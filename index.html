@@ -785,6 +785,24 @@
               qtyInput: '',
               submitted: null // holds printData once submitted
             };
+          } else {
+            // Batch was already cached from an earlier load — refresh each
+            // existing item's Description/Material/UOM from the server's
+            // latest data (e.g. an admin just added a previously-missing
+            // PLU to the Masterlist), WITHOUT touching local qty edits or
+            // any not-yet-saved new items, so "not in Masterlist" clears
+            // once the person taps Refresh instead of staying stuck.
+            var freshByPlu = {};
+            batch.items.forEach(function(it){ freshByPlu[String(it.plu).trim()] = it; });
+            pendingDraft[key].items.forEach(function(it){
+              if(it.isNew) return; // not yet saved to the sheet — nothing to refresh against
+              var fresh = freshByPlu[String(it.plu).trim()];
+              if(fresh){
+                it.description = fresh.description;
+                it.material = fresh.material;
+                it.uom = fresh.uom;
+              }
+            });
           }
         });
 
@@ -1132,6 +1150,18 @@
   function printBatch(key){
     var draft = pendingDraft[key];
     if(!draft) return;
+
+    // Refuse to print while any item in this batch is still flagged "not
+    // in Masterlist" (blank description — same flag New Entry's "Proceed
+    // anyway" produces). Applies whether the batch has already been
+    // submitted (checks the stored printData) or is still pending (checks
+    // the live draft items).
+    var itemsToCheck = draft.submitted ? draft.submitted.items : draft.items;
+    var hasUnmatched = itemsToCheck.some(function(it){ return !it.description; });
+    if(hasUnmatched){
+      alert('Some data is not in the masterlist. Please check.');
+      return;
+    }
 
     if(draft.submitted){
       openPrintView(draft.submitted);
